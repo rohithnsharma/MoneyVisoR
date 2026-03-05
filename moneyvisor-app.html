@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MoneyVisor">
+<meta name="theme-color" content="#0A0E1A">
+<title>MoneyVisor · Daily Post</title>
+
+<!-- PWA manifest inline -->
+<script>
+const manifest = {
+  name: "MoneyVisor FinPost",
+  short_name: "FinPost",
+  start_url: ".",
+  display: "standalone",
+  background_color: "#0A0E1A",
+  theme_color: "#0A0E1A",
+  icons: [{
+    src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='32' fill='%230A0E1A'/%3E%3Ctext x='96' y='130' font-size='110' text-anchor='middle' font-family='serif' fill='%23C9A84C'%3EF%3C/text%3E%3C/svg%3E",
+    sizes: "192x192", type: "image/svg+xml"
+  }]
+};
+const blob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
+const url  = URL.createObjectURL(blob);
+const link = document.createElement('link');
+link.rel = 'manifest'; link.href = url;
+document.head.appendChild(link);
+</script>
+
+<style>
+  :root {
+    --gold: #C9A84C;
+    --gold-2: #E8C97A;
+    --gold-dim: rgba(201,168,76,0.15);
+    --bg: #080C18;
+    --bg-2: #0F1625;
+    --bg-3: #161E30;
+    --bg-4: #1E2840;
+    --border: rgba(201,168,76,0.18);
+    --border-2: rgba(255,255,255,0.06);
+    --text: #EDF0F7;
+    --text-2: #9BA4BA;
+    --text-3: #5C6680;
+    --green: #2DD36F;
+    --red: #EB445A;
+    --linkedin: #0A66C2;
+    --substack: #FF6719;
+    --safe-top: env(safe-area-inset-top, 44px);
+    --safe-bot: env(safe-area-inset-bottom, 34px);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+  html, body {
+    height: 100%;
+    font-family: -apple-system, 'SF Pro Display', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow-x: hidden;
+  }
+
+  /* ── SCREENS ── */
+  .screen { display:none; flex-direction:column; min-height:100vh; min-height:100dvh; }
+  .screen.active { display:flex; }
+
+  /* ── SETUP SCREEN ── */
+  #setupScreen {
+    background: var(--bg);
+    align-items: center;
+    justify-content: center;
+    padding: calc(var(--safe-top) + 20px) 28px calc(var(--safe-bot) + 20px);
+  }
+  .setup-inner { width:100%; max-width:400px; }
+
+  .app-icon {
+    width: 80px; height: 80px; border-radius: 20px;
+    background: linear-gradient(135deg, #1A1200, #3D2B00);
+    border: 1px solid rgba(201,168,76,0.4);
+    display: flex; align-items:center; justify-content:center;
+    margin: 0 auto 20px;
+    box-shadow: 0 8px 32px rgba(201,168,76,0.2);
+  }
+  .app-icon-letter {
+    font-size: 44px; font-weight: 900;
+    background: linear-gradient(135deg, var(--gold), var(--gold-2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+
+  .setup-title {
+    font-size: 28px; font-weight: 800; text-align: center;
+    background: linear-gradient(135deg, var(--gold), var(--gold-2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 6px;
+  }
+  .setup-sub { font-size: 14px; color: var(--text-2); text-align:center; margin-bottom:36px; line-height:1.5; }
+
+  .field-label { font-size: 12px; font-weight: 600; color: var(--gold); letter-spacing: 1px; text-transform:uppercase; margin-bottom: 8px; }
+  .field-input {
+    width:100%; padding: 16px; border-radius: 14px;
+    background: var(--bg-3); border: 1px solid var(--border);
+    color: var(--text); font-size: 15px; font-family: inherit;
+    outline: none; margin-bottom: 6px;
+    -webkit-appearance: none;
+  }
+  .field-input:focus { border-color: var(--gold); }
+  .field-hint { font-size: 12px; color: var(--text-3); margin-bottom: 24px; line-height: 1.4; }
+  .field-hint a { color: var(--gold); text-decoration: none; }
+
+  .setup-btn {
+    width:100%; padding: 18px; border-radius: 16px; border: none;
+    background: linear-gradient(135deg, #9A6E1A, var(--gold), var(--gold-2));
+    color: #0A0E1A; font-size: 17px; font-weight: 800;
+    cursor: pointer; letter-spacing: 0.3px;
+    box-shadow: 0 4px 24px rgba(201,168,76,0.3);
+    margin-bottom: 20px;
+  }
+  .setup-btn:active { transform: scale(0.98); }
+
+  .install-tip {
+    background: var(--bg-3); border: 1px solid var(--border);
+    border-radius: 14px; padding: 16px;
+    font-size: 13px; color: var(--text-2); line-height: 1.6;
+  }
+  .install-tip strong { color: var(--text); }
+
+  /* ── MAIN SCREEN ── */
+  #mainScreen { background: var(--bg); }
+
+  /* Status bar space */
+  .status-pad { height: var(--safe-top); background: var(--bg); }
+
+  /* Top nav */
+  .topnav {
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 12px 20px 10px;
+    background: rgba(8,12,24,0.95);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 50;
+  }
+  .nav-logo {
+    font-size: 18px; font-weight: 800;
+    background: linear-gradient(135deg, var(--gold), var(--gold-2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .nav-date { font-size: 12px; color: var(--text-3); }
+  .nav-settings {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: var(--bg-3); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 16px;
+  }
+
+  /* Scroll area */
+  .scroll-area {
+    flex: 1; overflow-y: auto; padding: 20px 16px;
+    padding-bottom: calc(var(--safe-bot) + 90px);
+  }
+  .scroll-area::-webkit-scrollbar { display: none; }
+
+  /* Streak bar */
+  .streak-bar {
+    background: var(--bg-3); border: 1px solid var(--border);
+    border-radius: 14px; padding: 14px 16px; margin-bottom: 16px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .streak-left { font-size: 13px; color: var(--text-2); }
+  .streak-left strong { color: var(--text); }
+  .streak-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--green); animation: blink 2s infinite; flex-shrink:0;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+  .streak-right { font-size: 12px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+
+  /* Progress dots */
+  .progress-dots { display:flex; gap:5px; margin-bottom:20px; justify-content:center; }
+  .pdot {
+    height: 4px; border-radius: 2px; background: var(--bg-4); transition: all .3s;
+    flex: 1; max-width: 24px;
+  }
+  .pdot.done { background: var(--gold); }
+  .pdot.due  { background: #60A5FA; }
+
+  /* Generate button */
+  .gen-wrap { margin-bottom: 20px; }
+  .gen-btn {
+    width: 100%; padding: 20px; border-radius: 18px; border: none;
+    background: linear-gradient(135deg, #8A5E10, var(--gold), var(--gold-2));
+    color: #080C18; font-size: 17px; font-weight: 800;
+    cursor: pointer; display: flex; align-items:center; justify-content:center; gap: 10px;
+    box-shadow: 0 6px 28px rgba(201,168,76,0.28);
+    letter-spacing: 0.2px;
+    -webkit-appearance: none;
+  }
+  .gen-btn:active { transform: scale(0.97); }
+  .gen-btn:disabled { opacity: .5; transform: none; }
+
+  /* Topic pills */
+  .topic-section { margin-bottom: 20px; }
+  .topic-title { font-size: 11px; font-weight: 700; color: var(--text-3); letter-spacing: 1.5px; text-transform:uppercase; margin-bottom: 10px; }
+  .topic-scroll { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+  .topic-scroll::-webkit-scrollbar { display:none; }
+  .topic-pill {
+    flex-shrink: 0; padding: 7px 14px; border-radius: 20px; font-size: 13px; font-weight: 500;
+    border: 1px solid transparent; background: var(--bg-3); color: var(--text-2);
+    cursor: pointer; white-space: nowrap;
+  }
+  .topic-pill.india    { border-color: rgba(255,153,51,.25); color: rgba(255,153,51,.7); }
+  .topic-pill.india.on { border-color: #FF9933; color: #FF9933; background: rgba(255,153,51,.1); }
+  .topic-pill.global    { border-color: rgba(96,165,250,.25); color: rgba(96,165,250,.65); }
+  .topic-pill.global.on { border-color: #60A5FA; color: #60A5FA; background: rgba(96,165,250,.1); }
+  .topic-pill.neutral    { border-color: var(--border); }
+  .topic-pill.neutral.on { border-color: var(--gold); color: var(--gold); background: var(--gold-dim); }
+
+  /* Log */
+  .log-box {
+    background: var(--bg-3); border: 1px solid var(--border); border-radius: 14px;
+    padding: 14px 16px; margin-bottom: 16px;
+    font-size: 13px; color: var(--text-3); line-height: 1.8;
+    font-variant-numeric: tabular-nums; display: none;
+    max-height: 160px; overflow-y: auto;
+  }
+  .log-box.show { display: block; }
+  .log-s  { color: var(--gold-2); }
+  .log-ok { color: var(--green); }
+  .log-er { color: var(--red); }
+
+  /* POST CARD */
+  .post-card {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: 20px; overflow: hidden; margin-bottom: 16px;
+    animation: slideUp .4s ease both;
+  }
+  @keyframes slideUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+  .post-img { width:100%; height: 180px; object-fit: cover; background: var(--bg-4); display:block; }
+
+  .post-body { padding: 18px; }
+
+  .post-meta { display:flex; align-items:center; gap:7px; margin-bottom: 12px; flex-wrap:wrap; }
+  .mbadge {
+    padding: 3px 9px; border-radius: 20px; font-size: 10px; font-weight: 700;
+    letter-spacing: .7px; text-transform: uppercase;
+  }
+  .mbadge.india  { background: rgba(255,153,51,.12); color: #FF9933; border: 1px solid rgba(255,153,51,.25); }
+  .mbadge.global { background: rgba(96,165,250,.12); color: #60A5FA; border: 1px solid rgba(96,165,250,.25); }
+  .tbadge {
+    padding: 3px 9px; border-radius: 20px; font-size: 10px; font-weight: 600;
+    background: var(--gold-dim); color: var(--gold); border: 1px solid rgba(201,168,76,.2);
+    flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 140px;
+  }
+  .trendbadge { font-size: 12px; margin-left: auto; }
+
+  .post-title { font-size: 19px; font-weight: 800; line-height: 1.3; margin-bottom: 8px; }
+  .post-hook  { font-size: 13px; color: var(--text-2); font-style: italic; margin-bottom: 14px; line-height: 1.5; }
+
+  .source-line {
+    background: var(--bg-4); border-radius: 10px; padding: 9px 12px;
+    font-size: 12px; color: var(--text-3); margin-bottom: 14px;
+  }
+  .source-line strong { color: var(--text-2); }
+
+  .tickers { display:flex; gap:6px; flex-wrap:wrap; margin-bottom: 14px; }
+  .ticker {
+    font-size: 11px; padding: 3px 8px; border-radius: 6px;
+    background: var(--bg-4); border: 1px solid var(--border);
+    color: var(--gold-2); font-variant-numeric: tabular-nums;
+    font-family: 'SF Mono', monospace;
+  }
+
+  /* Platform switcher */
+  .platform-sw {
+    display:flex; background: var(--bg-3); border-radius: 12px; padding: 3px;
+    margin-bottom: 12px;
+  }
+  .psw-btn {
+    flex: 1; padding: 10px; border: none; border-radius: 9px;
+    font-size: 13px; font-weight: 700; cursor: pointer;
+    background: transparent; color: var(--text-3); transition: all .2s;
+    display:flex; align-items:center; justify-content:center; gap:5px;
+    font-family: inherit;
+  }
+  .psw-btn.li-on { background: var(--linkedin); color: #fff; }
+  .psw-btn.ss-on { background: var(--substack); color: #fff; }
+
+  .post-content {
+    background: var(--bg-3); border-radius: 12px; padding: 16px;
+    font-size: 14px; line-height: 1.8; color: #BCC5D6;
+    white-space: pre-wrap; min-height: 80px;
+    border: 1px solid var(--border-2);
+  }
+  .post-content .ht { color: #4B90D9; font-weight: 500; }
+
+  /* Action buttons */
+  .post-actions { display:flex; gap:8px; margin-top: 14px; flex-wrap:wrap; }
+  .abt {
+    flex: 1; min-width: 0; padding: 13px 10px; border-radius: 12px; border: none;
+    font-size: 13px; font-weight: 700; cursor: pointer;
+    display: flex; align-items:center; justify-content:center; gap:5px;
+    font-family: inherit; transition: all .2s; white-space: nowrap;
+  }
+  .abt-copy { background: var(--bg-3); color: var(--text-2); border: 1px solid var(--border); }
+  .abt-copy:active { background: rgba(45,211,111,.15); color: var(--green); border-color: var(--green); }
+  .abt-li { background: rgba(10,102,194,.15); color: #60A5FA; border: 1px solid rgba(10,102,194,.3); }
+  .abt-li:active { background: rgba(10,102,194,.3); }
+  .abt-ss { background: rgba(255,103,25,.12); color: #FF8A50; border: 1px solid rgba(255,103,25,.28); }
+  .abt-ss:active { background: rgba(255,103,25,.25); }
+
+  /* Bottom safe area filler */
+  .safe-bot-fill { height: var(--safe-bot); }
+
+  /* Settings modal */
+  .modal-overlay {
+    display:none; position:fixed; inset:0; z-index:200;
+    background: rgba(0,0,0,0.7); backdrop-filter: blur(6px);
+    align-items: flex-end;
+  }
+  .modal-overlay.open { display:flex; }
+  .modal-sheet {
+    width:100%; background: var(--bg-2);
+    border-radius: 24px 24px 0 0;
+    border-top: 1px solid var(--border);
+    padding: 12px 24px calc(var(--safe-bot) + 24px);
+    animation: sheetUp .3s ease;
+  }
+  @keyframes sheetUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+  .sheet-handle {
+    width: 36px; height: 4px; border-radius: 2px;
+    background: var(--bg-4); margin: 0 auto 20px;
+  }
+  .sheet-title { font-size: 17px; font-weight: 800; margin-bottom: 20px; }
+  .sheet-field-label { font-size: 11px; font-weight: 700; color: var(--gold); letter-spacing: 1px; text-transform:uppercase; margin-bottom: 8px; }
+  .sheet-input {
+    width:100%; padding:14px; border-radius:12px;
+    background: var(--bg-3); border: 1px solid var(--border);
+    color: var(--text); font-size:14px; font-family:inherit; outline:none;
+    margin-bottom:6px; -webkit-appearance:none;
+  }
+  .sheet-input:focus { border-color: var(--gold); }
+  .sheet-hint { font-size:12px; color:var(--text-3); margin-bottom:20px; }
+  .sheet-btn {
+    width:100%; padding:16px; border-radius:14px; border:none;
+    background: linear-gradient(135deg, var(--gold), var(--gold-2));
+    color: #080C18; font-size:16px; font-weight:800; cursor:pointer;
+    font-family:inherit; margin-bottom: 10px;
+  }
+  .sheet-btn:active { transform: scale(0.98); }
+  .sheet-btn-del {
+    width:100%; padding:14px; border-radius:14px; border:1px solid rgba(235,68,90,.3);
+    background: transparent; color: var(--red); font-size:15px; font-weight:700;
+    cursor:pointer; font-family:inherit;
+  }
+
+  /* Empty state */
+  .empty-state { text-align:center; padding: 40px 20px; }
+  .empty-icon { font-size:48px; margin-bottom:16px; opacity:.4; }
+  .empty-h { font-size:20px; font-weight:800; margin-bottom:8px; }
+  .empty-p { font-size:14px; color:var(--text-2); line-height:1.6; }
+
+  /* Notification reminder */
+  .reminder-bar {
+    background: linear-gradient(135deg, rgba(201,168,76,.12), rgba(232,201,122,.06));
+    border: 1px solid rgba(201,168,76,.25); border-radius:14px;
+    padding: 14px 16px; margin-bottom: 16px; font-size:13px; color:var(--text-2);
+    display:flex; align-items:center; gap:10px; cursor:pointer;
+  }
+  .reminder-bar strong { color:var(--text); }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- SETUP SCREEN -->
+<!-- ══════════════════════════════════════════════ -->
+<div class="screen active" id="setupScreen">
+  <div class="setup-inner">
+    <div class="app-icon"><div class="app-icon-letter">M</div></div>
+    <div class="setup-title">MoneyVisor</div>
+    <div class="setup-sub">Daily Finance Posts for<br>LinkedIn &amp; Substack · India-first</div>
+
+    <div class="field-label">Anthropic API Key</div>
+    <input class="field-input" id="apiKeyInput" type="password"
+           placeholder="sk-ant-api03-..."
+           autocomplete="off" autocorrect="off" spellcheck="false">
+    <div class="field-hint">
+      Get your key free at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>
+      · Add $5 credit · ~500 posts · Stored only on this device.
+    </div>
+
+    <button class="setup-btn" onclick="saveKey()">Get Started →</button>
+
+    <div class="install-tip">
+      <strong>📲 Add to Home Screen</strong><br>
+      Tap the Share button <strong>⎙</strong> in Safari → <strong>"Add to Home Screen"</strong> → it works like a real app with no browser chrome.
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- MAIN SCREEN -->
+<!-- ══════════════════════════════════════════════ -->
+<div class="screen" id="mainScreen">
+  <div class="status-pad"></div>
+
+  <div class="topnav">
+    <div>
+      <div class="nav-logo">MoneyVisor</div>
+      <div class="nav-date" id="navDate"></div>
+    </div>
+    <div class="nav-settings" onclick="openSettings()">⚙️</div>
+  </div>
+
+  <div class="scroll-area">
+
+    <!-- Reminder bar -->
+    <div class="reminder-bar" id="reminderBar" onclick="requestNotif()" style="display:none">
+      <span style="font-size:20px">🔔</span>
+      <div><strong>Enable daily reminder</strong><br>Tap to get notified at 8:30 AM every day</div>
+    </div>
+
+    <!-- Streak / rotation info -->
+    <div class="streak-bar">
+      <div class="streak-left">
+        <div id="streakLabel">Loading…</div>
+        <div id="nextLabel" style="font-size:11px;color:var(--text-3);margin-top:2px"></div>
+      </div>
+      <div class="streak-dot"></div>
+    </div>
+
+    <!-- Progress dots (8 dots = india streak, then global) -->
+    <div class="progress-dots" id="progressDots"></div>
+
+    <!-- Topic pills -->
+    <div class="topic-section">
+      <div class="topic-title">Today's Focus</div>
+      <div class="topic-scroll" id="topicPills">
+        <div class="topic-pill india on"  data-topic="NSE/BSE Markets">🇮🇳 NSE/BSE</div>
+        <div class="topic-pill india on"  data-topic="RBI & Policy">🇮🇳 RBI</div>
+        <div class="topic-pill india on"  data-topic="India Startup & VC">🇮🇳 Startup</div>
+        <div class="topic-pill india on"  data-topic="India GDP & Economy">🇮🇳 Economy</div>
+        <div class="topic-pill india on"  data-topic="Indian Banking & NBFC">🇮🇳 Banking</div>
+        <div class="topic-pill neutral on" data-topic="Entrepreneur Finance Insights">💡 Entrepreneur</div>
+        <div class="topic-pill global"    data-topic="Federal Reserve & US Rates">🌍 Fed</div>
+        <div class="topic-pill global"    data-topic="S&P 500 & Nasdaq">🌍 S&amp;P</div>
+      </div>
+    </div>
+
+    <!-- Generate button -->
+    <div class="gen-wrap">
+      <button class="gen-btn" id="genBtn" onclick="generate()">
+        <span>⚡</span> Generate Today's Post
+      </button>
+    </div>
+
+    <!-- Log -->
+    <div class="log-box" id="logBox"></div>
+
+    <!-- Output -->
+    <div id="output">
+      <div class="empty-state">
+        <div class="empty-icon">📰</div>
+        <div class="empty-h">Ready</div>
+        <div class="empty-p">Hit Generate to get today's trending India finance post — crafted for your LinkedIn &amp; Substack.</div>
+      </div>
+    </div>
+
+  </div><!-- /scroll-area -->
+</div><!-- /mainScreen -->
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- SETTINGS MODAL -->
+<!-- ══════════════════════════════════════════════ -->
+<div class="modal-overlay" id="settingsModal" onclick="closeSettingsOutside(event)">
+  <div class="modal-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">⚙️ Settings</div>
+    <div class="sheet-field-label">API Key</div>
+    <input class="sheet-input" id="settingsKey" type="password"
+           placeholder="sk-ant-api03-..." autocorrect="off" spellcheck="false">
+    <div class="sheet-hint">Your Anthropic API key · Stored locally on this device only</div>
+    <button class="sheet-btn" onclick="saveSettingsKey()">Save Key</button>
+    <button class="sheet-btn-del" onclick="resetApp()">Reset App &amp; Clear Key</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════ -->
+<script>
+// ── CONSTANTS ──────────────────────────────────────────────────────────────
+const GLOBAL_EVERY  = 8;
+const LINKEDIN_URL  = 'https://www.linkedin.com/company/moneyvisorwm/';
+const SUBSTACK_URL  = 'https://moneyvisor.substack.com/publish/post';
+const IMAGES_INDIA  = [
+  'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&q=75',
+  'https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?w=800&q=75',
+  'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&q=75',
+  'https://images.unsplash.com/photo-1604594849809-dfedbc827105?w=800&q=75',
+  'https://images.unsplash.com/photo-1638913971251-46558e8bf72c?w=800&q=75',
+];
+const IMAGES_GLOBAL = [
+  'https://images.unsplash.com/photo-1560221328-12fe60f83ab8?w=800&q=75',
+  'https://images.unsplash.com/photo-1642543492481-44e81e3914a7?w=800&q=75',
+  'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&q=75',
+];
+const randImg = arr => arr[Math.floor(Math.random() * arr.length)];
+
+// ── STATE (localStorage — persists on iPhone) ──────────────────────────────
+function loadState() {
+  try { return JSON.parse(localStorage.getItem('mv_state') || '{}'); } catch { return {}; }
+}
+function saveState(s) { localStorage.setItem('mv_state', JSON.stringify(s)); }
+function loadKey()    { return localStorage.getItem('mv_apikey') || ''; }
+function saveKey2(k)  { localStorage.setItem('mv_apikey', k); }
+
+// ── BOOT ───────────────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  const key = loadKey();
+  if (key) {
+    showMain();
+  }
+  // Topic pill toggles
+  document.querySelectorAll('.topic-pill').forEach(p =>
+    p.addEventListener('click', () => p.classList.toggle('on'))
+  );
+});
+
+function showMain() {
+  document.getElementById('setupScreen').classList.remove('active');
+  document.getElementById('mainScreen').classList.add('active');
+  initMain();
+}
+
+function saveKey() {
+  const k = document.getElementById('apiKeyInput').value.trim();
+  if (!k.startsWith('sk-')) { alert('Paste your API key — it starts with sk-ant-...'); return; }
+  saveKey2(k);
+  showMain();
+}
+
+function initMain() {
+  // Date
+  const now = new Date();
+  document.getElementById('navDate').textContent =
+    now.toLocaleDateString('en-IN', {weekday:'short', day:'numeric', month:'short'});
+
+  // Streak UI
+  renderStreak();
+
+  // Notification reminder (show if not yet granted)
+  if ('Notification' in window && Notification.permission === 'default') {
+    document.getElementById('reminderBar').style.display = 'flex';
+  }
+}
+
+function renderStreak() {
+  const s = loadState();
+  const since = s.india_since || 0;
+  const total = s.total || 0;
+  const rem   = GLOBAL_EVERY - since;
+
+  document.getElementById('streakLabel').innerHTML =
+    rem <= 0
+      ? '<strong>🌍 International post due today</strong>'
+      : `<strong>🇮🇳 India streak</strong> · ${since} of ${GLOBAL_EVERY}`;
+  document.getElementById('nextLabel').textContent =
+    rem <= 0 ? 'Global story · India-impact angle' : `Global post in ~${rem} day${rem===1?'':'s'}`;
+
+  // Progress dots
+  const dots = document.getElementById('progressDots');
+  dots.innerHTML = '';
+  for (let i = 0; i < GLOBAL_EVERY; i++) {
+    const d = document.createElement('div');
+    d.className = 'pdot' + (i < since ? ' done' : '') + (i === since && rem > 0 ? ' due' : '');
+    dots.appendChild(d);
+  }
+}
+
+// ── GENERATE ───────────────────────────────────────────────────────────────
+async function generate() {
+  const key = loadKey();
+  if (!key) { openSettings(); return; }
+
+  const btn = document.getElementById('genBtn');
+  const log = document.getElementById('logBox');
+  const out = document.getElementById('output');
+
+  btn.disabled = true;
+  log.className = 'log-box show';
+  log.innerHTML = '';
+  out.innerHTML = '';
+
+  const s = loadState();
+  const postType = (s.india_since || 0) >= GLOBAL_EVERY ? 'global' : decideTypeFromTopics();
+  const dateStr  = new Date().toLocaleDateString('en-IN',
+    {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+
+  const steps = postType === 'india' ? [
+    ['🔍 Scanning Economic Times, Mint, NSE last 24h…', 600],
+    ['📊 Picking hottest India finance story today…', 800],
+    ['✍️ Writing LinkedIn post (entrepreneur angle)…', 900],
+    ['📝 Writing Substack newsletter intro…', 650],
+    ['🖼️ Pairing Unsplash image (royalty-free)…', 350],
+    ['✅ Done!', 200],
+  ] : [
+    ['🌍 Scanning Reuters, Bloomberg, FT last 24h…', 600],
+    ['📊 Finding global story with India-impact angle…', 850],
+    ['✍️ Writing LinkedIn post (global → India lens)…', 900],
+    ['📝 Writing Substack newsletter intro…', 650],
+    ['🖼️ Pairing Unsplash image (royalty-free)…', 350],
+    ['✅ Done!', 200],
+  ];
+
+  for (const [msg, delay] of steps) {
+    await sleep(delay);
+    log.innerHTML += `<span class="log-s">→ </span>${msg}\n`;
+    log.scrollTop = log.scrollHeight;
+  }
+
+  const post = await callClaude(key, postType, dateStr);
+
+  // Update state
+  if (postType === 'india') { s.india_since = (s.india_since || 0) + 1; }
+  else                      { s.india_since = 0; }
+  s.total = (s.total || 0) + 1;
+  s.last  = new Date().toISOString();
+  saveState(s);
+  renderStreak();
+
+  const img = randImg(postType === 'india' ? IMAGES_INDIA : IMAGES_GLOBAL);
+  out.innerHTML = '';
+  out.appendChild(buildCard(post, postType, img, dateStr));
+
+  log.innerHTML += `<span class="log-ok">✔ ${postType==='global'?'🌍 Global':'🇮🇳 India'} post ready · total: ${s.total}</span>\n`;
+  btn.disabled = false;
+  btn.innerHTML = '<span>🔄</span> Generate New Post';
+
+  // Scroll to post
+  setTimeout(() => out.scrollIntoView({behavior:'smooth', block:'start'}), 100);
+}
+
+function decideTypeFromTopics() {
+  const active = [...document.querySelectorAll('.topic-pill.on')].map(p => p.dataset.topic);
+  const onlyGlobal = active.length > 0 && active.every(t =>
+    t.includes('Federal') || t.includes('S&P') || t.includes('Nasdaq'));
+  return onlyGlobal ? 'global' : 'india';
+}
+
+// ── CLAUDE API CALL ─────────────────────────────────────────────────────────
+async function callClaude(key, postType, dateStr) {
+  const topics = [...document.querySelectorAll('.topic-pill.on')].map(p => p.dataset.topic);
+  const indiaT = topics.filter(t => !t.includes('Federal')&&!t.includes('S&P')&&!t.includes('Nasdaq'));
+  const globalT = topics.filter(t => t.includes('Federal')||t.includes('S&P')||t.includes('Nasdaq'));
+  const topicList = postType === 'india'
+    ? (indiaT.length ? indiaT.join(', ') : 'NSE/BSE Markets, RBI Policy, Indian Economy')
+    : (globalT.length ? globalT.join(', ') : 'Federal Reserve, S&P 500, Global Macro');
+
+  const prompt = postType === 'india'
+    ? `Today is ${dateStr}. Finance content agent for MoneyVisor (Indian wealth management).
+
+Pick the SINGLE most important trending India finance story from PAST 24 HOURS.
+Focus: ${topicList}
+
+Use "As an entrepreneur in finance at MoneyVisor…" framing.
+Include real numbers, index levels, company names.
+
+Respond with ONLY a JSON object (no markdown, no extra text):
+{"title":"8-12 word headline","hook":"1 compelling sentence about the news","newsSource":"e.g. Economic Times","topic":"focus area","linkedin":"220-280 word LinkedIn post with emojis, 3-5 hashtags, engagement question at end","substack":"130-160 word Substack intro, analytical tone, invite subscribe to MoneyVisor, no hashtags","tickers":["NIFTY50","SENSEX"],"trend":"bullish","market":"india"}`
+    : `Today is ${dateStr}. Finance content agent for MoneyVisor (Indian wealth management).
+
+Pick the SINGLE most important global finance story from PAST 24 HOURS.
+Focus: ${topicList}
+Must include: how it impacts India — INR, FII flows, RBI, IT sector.
+
+Respond with ONLY a JSON object (no markdown, no extra text):
+{"title":"8-12 word headline with India angle","hook":"1 sentence: global event + India impact","newsSource":"e.g. Reuters","topic":"International Markets","linkedin":"220-280 word LinkedIn post with global news then India pivot, emojis, 3-5 hashtags, question","substack":"130-160 word Substack intro, analytical, global + India transmission, invite subscribe, no hashtags","tickers":["USDINR","BANKNIFTY"],"trend":"neutral","market":"global"}`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-calls': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2500,
+        system: 'You are a finance content strategist for MoneyVisor. Respond with ONLY a valid JSON object. No markdown fences. No text before or after the JSON. Start with { end with }.',
+        messages: [
+          { role: 'user',      content: prompt },
+          { role: 'assistant', content: '{'    }
+        ]
+      })
+    });
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      throw new Error(`HTTP ${res.status}: ${errText.slice(0, 120)}`);
+    }
+
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+
+    const raw = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+    const combined = ('{' + raw).replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/\s*```$/,'').trim();
+    const match = combined.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('No JSON in response');
+
+    const parsed = JSON.parse(match[0]);
+    if (!parsed.title || !parsed.linkedin) throw new Error('Incomplete JSON');
+    if (typeof parsed.tickers === 'string') parsed.tickers = [parsed.tickers];
+    if (!Array.isArray(parsed.tickers)) parsed.tickers = [];
+    return parsed;
+
+  } catch (e) {
+    document.getElementById('logBox').innerHTML +=
+      `<span class="log-er">⚠ ${e.message} — using fallback</span>\n`;
+    return getFallback(postType);
+  }
+}
+
+// ── BUILD CARD ──────────────────────────────────────────────────────────────
+function buildCard(post, type, img, dateStr) {
+  const card = document.createElement('div');
+  card.className = 'post-card';
+  const id   = 'c' + Date.now();
+  const isG  = type === 'global';
+  const te   = {bullish:'📈',bearish:'📉'}[post.trend] || '➡️';
+  const tc   = {bullish:'var(--green)',bearish:'var(--red)'}[post.trend] || 'var(--text-3)';
+  const tix  = (post.tickers||[]).map(t=>`<span class="ticker">${t}</span>`).join('');
+
+  card.innerHTML = `
+    <img class="post-img" src="${img}" alt="Finance" loading="lazy" onerror="this.style.display='none'">
+    <div class="post-body">
+      <div class="post-meta">
+        <span class="mbadge ${isG?'global':'india'}">${isG?'🌍 Global':'🇮🇳 India'}</span>
+        <span class="tbadge">${post.topic||'Markets'}</span>
+        <span class="trendbadge" style="color:${tc}">${te} ${post.trend||''}</span>
+      </div>
+      <div class="post-title">${post.title||''}</div>
+      <div class="post-hook">"${post.hook||''}"</div>
+      <div class="source-line">📡 <strong>${post.newsSource||'Market Data'}</strong> · ${dateStr}</div>
+      ${tix ? `<div class="tickers">${tix}</div>` : ''}
+      <div class="platform-sw" id="psw_${id}">
+        <button class="psw-btn li-on" onclick="sw('${id}','li')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+          LinkedIn
+        </button>
+        <button class="psw-btn" onclick="sw('${id}','ss')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M22.539 8.242H1.46V5.406h21.08v2.836zM1.46 10.812V24L12 18.11 22.54 24V10.812H1.46zM22.54 0H1.46v2.836h21.08V0z"/></svg>
+          Substack
+        </button>
+      </div>
+      <div class="post-content" id="li_${id}">${fmt(post.linkedin)}</div>
+      <div class="post-content" id="ss_${id}" style="display:none">${fmt(post.substack)}</div>
+      <div class="post-actions">
+        <button class="abt abt-copy" id="cpbtn_${id}" onclick="cp('${id}')">📋 Copy</button>
+        <button class="abt abt-li" onclick="doLI('${id}')">↗ LinkedIn</button>
+        <button class="abt abt-ss" onclick="window.open('${SUBSTACK_URL}','_blank')">↗ Substack</button>
+      </div>
+    </div>`;
+  return card;
+}
+
+function fmt(t) {
+  if (!t) return '';
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+          .replace(/(#\w+)/g,'<span class="ht">$1</span>');
+}
+
+function sw(id, p) {
+  const psw = document.getElementById(`psw_${id}`);
+  const [lb, sb] = psw.querySelectorAll('.psw-btn');
+  document.getElementById(`li_${id}`).style.display = p==='li'?'block':'none';
+  document.getElementById(`ss_${id}`).style.display = p==='ss'?'block':'none';
+  lb.className = 'psw-btn' + (p==='li'?' li-on':'');
+  sb.className = 'psw-btn' + (p==='ss'?' ss-on':'');
+  psw._a = p;
+}
+
+function cp(id) {
+  const psw = document.getElementById(`psw_${id}`);
+  const p   = psw._a || 'li';
+  const txt = document.getElementById(`${p}_${id}`).innerText;
+  // iOS Safari share sheet fallback
+  if (navigator.share) {
+    navigator.share({ text: txt }).catch(() => fallbackCopy(txt, id));
+  } else {
+    fallbackCopy(txt, id);
+  }
+}
+
+function fallbackCopy(txt, id) {
+  const ta = document.createElement('textarea');
+  ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.focus(); ta.select();
+  try { document.execCommand('copy'); } catch {}
+  document.body.removeChild(ta);
+  const btn = document.getElementById(`cpbtn_${id}`);
+  if (btn) { const o=btn.textContent; btn.textContent='✅ Copied!'; setTimeout(()=>btn.textContent=o,2000); }
+}
+
+function doLI(id) {
+  const psw = document.getElementById(`psw_${id}`);
+  const p   = psw._a || 'li';
+  const txt = document.getElementById(`${p}_${id}`).innerText;
+  // Copy then open LinkedIn
+  fallbackCopy(txt, id);
+  setTimeout(() => window.open(LINKEDIN_URL, '_blank'), 400);
+}
+
+// ── SETTINGS ───────────────────────────────────────────────────────────────
+function openSettings() {
+  document.getElementById('settingsKey').value = loadKey();
+  document.getElementById('settingsModal').classList.add('open');
+}
+function closeSettingsOutside(e) {
+  if (e.target === document.getElementById('settingsModal'))
+    document.getElementById('settingsModal').classList.remove('open');
+}
+function saveSettingsKey() {
+  const k = document.getElementById('settingsKey').value.trim();
+  if (!k.startsWith('sk-')) { alert('Invalid key format — should start with sk-ant-'); return; }
+  saveKey2(k);
+  document.getElementById('settingsModal').classList.remove('open');
+  alert('✅ API key saved!');
+}
+function resetApp() {
+  if (!confirm('Reset app? This clears your API key and streak data.')) return;
+  localStorage.clear();
+  location.reload();
+}
+
+// ── NOTIFICATIONS ──────────────────────────────────────────────────────────
+async function requestNotif() {
+  if (!('Notification' in window)) { alert('Notifications not supported in this browser.'); return; }
+  const perm = await Notification.requestPermission();
+  if (perm === 'granted') {
+    document.getElementById('reminderBar').style.display = 'none';
+    // Schedule a notification for 8:30 AM today or tomorrow
+    scheduleNotification();
+    alert('✅ Reminder set for 8:30 AM daily!\n\nNote: Keep the app open in a Safari tab or add it to your Home Screen for reminders to work.');
+  }
+}
+
+function scheduleNotification() {
+  const now   = new Date();
+  const fire  = new Date();
+  fire.setHours(8, 30, 0, 0);
+  if (fire <= now) fire.setDate(fire.getDate() + 1);
+  const ms = fire - now;
+  setTimeout(() => {
+    new Notification('MoneyVisor FinPost', {
+      body: '📊 Time to generate today\'s India finance post!',
+      icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="%230A0E1A"/><text y="48" x="32" font-size="40" text-anchor="middle" fill="%23C9A84C">M</text></svg>'
+    });
+    // Re-schedule for next day
+    setTimeout(scheduleNotification, 24 * 60 * 60 * 1000);
+  }, ms);
+}
+
+// ── FALLBACK CONTENT ────────────────────────────────────────────────────────
+function getFallback(type) {
+  if (type === 'global') return {
+    title: "Fed Holds Rates — INR & FII Flows Feel Immediate Pressure",
+    hook: "The Federal Reserve signalled no rate cuts in Q1 2026, and India's equity markets absorbed the shock within hours.",
+    newsSource: "Reuters / Bloomberg",
+    topic: "International Markets",
+    linkedin: `🌍 The Fed just held rates — and India felt it instantly.\n\nAt last night's FOMC meeting, the Federal Reserve kept rates at 5.25-5.5% and dropped its soft-pivot language entirely. For most, this was a US story. For us at MoneyVisor, it's an India story.\n\n📊 The India impact in 48 hours:\n📌 Dollar Index +0.6% → INR slipped to 84.9\n📌 FIIs pulled ₹3,600 crore from Indian equities\n📌 RBI rate-cut timeline likely pushed by one quarter\n📌 IT exporters benefit; oil importers face margin compression\n\nAs an entrepreneur in finance at MoneyVisor, I track Fed signals obsessively — not for US trades, but because every FOMC decision ripples through every Indian balance sheet within days.\n\nYour working capital cost, loan rates, and startup's dollar exposure — all connected to Powell's words.\n\nMy framework right now:\n✅ Favour IT and pharma — natural dollar hedges\n✅ Stay underweight rate-sensitive NBFCs short term\n✅ Watch 10Y G-Sec — if it crosses 7.1%, trim duration\n\nGlobal macro is India's silent CFO. Are you reading its signals?\n\n#FederalReserve #IndiaMarkets #INR #MacroInvesting #MoneyVisor`,
+    substack: `The Federal Reserve's hawkish hold marks a pivotal moment for India's monetary and capital market trajectory in early 2026. Jerome Powell's press conference stripped away the soft-pivot language that had been giving the RBI cover to consider easing — and the rupee's immediate slide to 84.9 confirms that global fund managers repriced India risk within hours. For MoneyVisor readers, the more important story is the second-order effect: with the RBI now likely to delay its own rate cuts, rate-sensitive borrowers — NBFCs, real estate developers, and leveraged businesses — face a longer wait for relief. In this week's deep-dive, we map the full transmission from the Fed's dot plot to India's sovereign yield curve, rupee trajectory, and the specific sectors that face the sharpest earnings revisions. Subscribe to MoneyVisor for the complete analysis.`,
+    tickers: ["USDINR","BANKNIFTY","NIFTYIT"],
+    trend: "bearish",
+    market: "global"
+  };
+
+  return {
+    title: "Nifty50 Hits 6-Week High as FIIs Return With ₹5,200 Crore Inflow",
+    hook: "A surprise CPI beat and surging FII buying pushed Nifty50 to its best session in six weeks — here's the full read.",
+    newsSource: "Economic Times / NSE Bulletin",
+    topic: "NSE/BSE Markets",
+    linkedin: `🚀 Nifty50 just logged its best session in 6 weeks — driven by two catalysts at once.\n\nToday's benchmark surge to 22,650 wasn't random. Two powerful signals converged:\n\n📊 What happened:\n📌 FII net buying: ₹5,200 crore — highest single-session in 2 months\n📌 February CPI: 4.6% vs 4.9% expected — material downside surprise\n📌 Banking sector: +2.3% · Auto: +1.9% · Midcap 150: +2.1%\n📌 Broad-based — advance-decline ratio was 3:1\n\nThe CPI surprise is the bigger deal. It puts an RBI rate cut firmly back on the table for April-June, and bond markets priced it in immediately with the 10Y G-Sec yield dropping 9bps.\n\nAs an entrepreneur in finance at MoneyVisor, I see this convergence — softer inflation plus institutional conviction — as a classic set-up for a sustained move, not just a one-day bounce.\n\nBut discipline beats excitement every time.\n\n✅ Quality large caps over momentum midcaps right now\n✅ Banking and rate-sensitives deserve a fresh look\n✅ Keep SIPs running — compounding rewards consistency\n\nAre you adding to positions here, or waiting for a pullback? Drop your view below.\n\n#Nifty50 #NSE #FII #RBI #MoneyVisor`,
+    substack: `Today's Nifty50 surge is more than a feel-good rally — it's a confluence of macro signals that materially shift India's near-term equity outlook. The February CPI print of 4.6% arrived well below consensus, bringing the RBI's rate-cut cycle back into active consideration after weeks of being priced out. Simultaneously, the ₹5,200 crore FII inflow — the largest single-session figure in two months — suggests that global institutional investors are re-committing to India as their preferred emerging market, particularly as competing narratives in China and Southeast Asia remain uncertain. The banking sector's outperformance is a tell: smart money sees first-order rate-cut beneficiaries and is positioning early. At MoneyVisor, we dig into which specific stocks are statistically most sensitive to a rate-cut cycle, and where the real asymmetric opportunity sits. Subscribe for the full analysis.`,
+    tickers: ["NIFTY50","BANKNIFTY","SENSEX"],
+    trend: "bullish",
+    market: "india"
+  };
+}
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+</script>
+</body>
+</html>
